@@ -4,11 +4,12 @@ import indigo.shared.datatypes.RGBA
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 
-@JSExportTopLevel("IndigoGame") // Pandering to mdoc
+@JSExportTopLevel("IndigoGame")
 object HelloIndigo extends IndigoSandbox[Unit, Model] {
 
   val config: GameConfig =
-    GameConfig.default.withViewport(GameViewport(720, 480))
+    GameConfig.default
+      .withViewport(GameViewport(720, 480))
 
   val animations: Set[Animation] =
     Set()
@@ -31,53 +32,40 @@ object HelloIndigo extends IndigoSandbox[Unit, Model] {
     Outcome(Startup.Success(()))
 
   def initialModel(startupData: Unit): Outcome[Model] =
-    Outcome(Model.initial(config.viewport.center))
+    Outcome(Model.initial)
 
   def updateModel(
       context: FrameContext[Unit],
       model: Model
   ): GlobalEvent => Outcome[Model] = {
-    case e: MouseEvent.Click =>
-      val clickPoint = e.position
-      val adjustedPosition = clickPoint - model.center
-
-      Outcome(
-        model.addDot(
-          Dot(
-            Point.distanceBetween(model.center, clickPoint).toInt,
-            Radians(
-              Math.atan2(
-                adjustedPosition.x.toDouble,
-                adjustedPosition.y.toDouble
-              )
-            )
-          )
-        )
-      )
-
-    case FrameTick => Outcome(model.update(context.delta))
+    case e: MouseEvent.Click => Outcome(model.update)
     case _ => Outcome(model)
   }
 
   def present(
       context: FrameContext[Unit],
       model: Model
-  ): Outcome[SceneUpdateFragment] =
-    Outcome(
-      SceneUpdateFragment(
-        Graphic(Rectangle(0, 0, 32, 32), 1, Material.Bitmap(assetName)) :: drawDots(model.center, model.dots))
-    )
-
-  def drawDots(center: Point, dots: Batch[Dot]): Batch[Graphic[_]] =
-    dots.map { dot =>
-      val position = Point(
-        (Math.sin(dot.angle.toDouble) * dot.orbitDistance + center.x).toInt,
-        (Math.cos(dot.angle.toDouble) * dot.orbitDistance + center.y).toInt
-      )
-
-      Graphic(
+  ): Outcome[SceneUpdateFragment] = {
+    val graphic = model.counter % 4 match {
+      case 0 => Graphic(
         Rectangle(0, 0, 32, 32), 1, Material.Bitmap(assetName)
-      ).withCrop(Rectangle(0, 0, 16, 16)).moveTo(position)
+      ).withCrop(Rectangle(0, 0, 16, 16))
+      case 1 =>
+        Graphic(
+          Rectangle(0, 0, 32, 32), 1, Material.Bitmap(assetName)
+        ).withCrop(Rectangle(0, 16, 16, 16))
+      case 2 =>
+        Graphic(
+          Rectangle(0, 0, 32, 32), 1, Material.Bitmap(assetName)
+        ).withCrop(Rectangle(16, 0, 16, 16))
+      case 3 =>
+        Graphic(
+          Rectangle(0, 0, 32, 32), 1, Material.Bitmap(assetName)
+        ).withCrop(Rectangle(16, 16, 16, 16))
     }
 
+    Outcome(SceneUpdateFragment(
+      graphic.moveTo(config.viewport.center)
+    ))
+  }
 }
